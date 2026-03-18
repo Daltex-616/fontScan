@@ -1,0 +1,55 @@
+.post-card { 
+    background: white; 
+    border-radius: 12px; 
+    padding: 12px; 
+    border: 1px solid #eee; 
+    height: 100%; 
+    display: flex; 
+    flex-direction: column; 
+}
+
+.media-container { 
+    width: 100%; 
+    aspect-ratio: 1/1; 
+    background: #000; 
+    border-radius: 8px; 
+    overflow: hidden; 
+    position: relative; 
+}
+
+.media-container img { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; 
+}
+
+/* ESTILO PARA HASHTAGS CON SCROLL SUTIL (No rompe la estética) */
+.post-meta-scroll { 
+    max-height: 40px; /* Altura fija para mantener el diseño uniforme */
+    overflow-y: auto; 
+    scrollbar-width: none; /* Oculta scroll en Firefox */
+    -ms-overflow-style: none; /* Oculta scroll en IE */
+    margin-bottom: 4px; 
+}
+
+.post-meta-scroll::-webkit-scrollbar { 
+    display: none; /* Oculta scroll en Chrome/Safari */
+}
+
+.tag-text { 
+    color: #007bff; 
+    font-weight: 800; 
+    font-size: 0.85rem; 
+    word-break: break-word; 
+    line-height: 1.2; 
+    display: block; 
+}
+
+.mention-text { 
+    color: #dc3545; 
+    font-weight: 800; 
+    font-size: 0.85rem; 
+    word-break: break-word; 
+    line-height: 1.2; 
+    display: block; 
+}
