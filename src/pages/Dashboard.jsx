@@ -167,26 +167,28 @@ const Dashboard = () => {
         setEndDate('');
     };
 
-    // --- 8. LÓGICA DE FILTRADO CORREGIDA ---
+    // --- 8. LÓGICA DE FILTRADO Y LOCALIDADES ÚNICAS ---
     const uniqueLocations = useMemo(() => {
-        return [...new Set(users.map(u => u.location))].filter(Boolean).sort();
+        // Limpiamos espacios y eliminamos duplicados con Set
+        const locs = users
+            .map(u => u.location?.trim())
+            .filter(Boolean);
+        return [...new Set(locs)].sort();
     }, [users]);
 
     const filteredPosts = useMemo(() => {
         const search = String(filterValue || "").toLowerCase().trim();
 
         return posts.filter(p => {
-            // Filtro de texto
             const matchesText = !search || 
                 p.hashtags?.toLowerCase().includes(search) || 
                 p.mentions?.toLowerCase().includes(search) ||
                 p.user?.toLowerCase().includes(search);
             
-            // Filtro de localidad
             const userObj = users.find(u => u.username === p.user);
-            const matchesLocation = !filterLocation || userObj?.location === filterLocation;
+            const userLoc = userObj?.location?.trim() || "";
+            const matchesLocation = !filterLocation || userLoc === filterLocation.trim();
 
-            // Filtro de fecha robusto
             let matchesDate = true;
             const postDate = p.timestamp ? new Date(p.timestamp) : null;
 
@@ -200,7 +202,6 @@ const Dashboard = () => {
                     if (postDate > eDate) matchesDate = false;
                 }
             }
-
             return matchesText && matchesDate && matchesLocation;
         });
     }, [posts, filterValue, startDate, endDate, filterLocation, users]);
@@ -271,7 +272,7 @@ const Dashboard = () => {
                                 ))}
                             </select>
                             {filterLocation && (
-                                <button className="btn btn-sm btn-link text-danger p-0 fw-bold" onClick={() => setFilterLocation('')}>✕</button>
+                                <button className="btn btn-sm btn-link text-danger p-0 fw-bold text-decoration-none" onClick={() => setFilterLocation('')}>✕</button>
                             )}
                         </div>
                     </div>
