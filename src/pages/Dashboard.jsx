@@ -66,12 +66,8 @@ const Dashboard = () => {
     const checkScanStatus = async () => {
         try {
             const res = await api.get('/posts/scan-status'); 
-            const wasScanning = isScanning;
             setIsScanning(res.data.isScanning);
-            
-            if (wasScanning && !res.data.isScanning) {
-                fetchData();
-            }
+            if (isScanning && !res.data.isScanning) fetchData();
         } catch (e) {}
     };
 
@@ -162,22 +158,29 @@ const Dashboard = () => {
         } catch (e) {}
     };
 
-    const clearDateFilters = () => {
-        setStartDate('');
-        setEndDate('');
+    // --- 8. LÓGICA DE NORMALIZACIÓN Y FILTRADO ---
+    
+    // Función para normalizar texto: "rio cuarto" -> "Rio Cuarto"
+    const normalizeString = (str) => {
+        if (!str) return "";
+        return str
+            .trim()
+            .toLowerCase()
+            .split(' ')
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(' ');
     };
 
-    // --- 8. LÓGICA DE FILTRADO Y LOCALIDADES ÚNICAS ---
     const uniqueLocations = useMemo(() => {
-        // Limpiamos espacios y eliminamos duplicados con Set
         const locs = users
-            .map(u => u.location?.trim())
+            .map(u => normalizeString(u.location))
             .filter(Boolean);
         return [...new Set(locs)].sort();
     }, [users]);
 
     const filteredPosts = useMemo(() => {
         const search = String(filterValue || "").toLowerCase().trim();
+        const targetLoc = normalizeString(filterLocation);
 
         return posts.filter(p => {
             const matchesText = !search || 
@@ -186,12 +189,11 @@ const Dashboard = () => {
                 p.user?.toLowerCase().includes(search);
             
             const userObj = users.find(u => u.username === p.user);
-            const userLoc = userObj?.location?.trim() || "";
-            const matchesLocation = !filterLocation || userLoc === filterLocation.trim();
+            const userLocNormalized = normalizeString(userObj?.location);
+            const matchesLocation = !filterLocation || userLocNormalized === targetLoc;
 
             let matchesDate = true;
             const postDate = p.timestamp ? new Date(p.timestamp) : null;
-
             if (postDate && !isNaN(postDate)) {
                 if (startDate) {
                     const sDate = new Date(startDate + 'T00:00:00');
@@ -240,7 +242,7 @@ const Dashboard = () => {
                         savedFilters={savedFilters} deleteFilter={deleteFilter}
                         startDate={startDate} setStartDate={setStartDate}
                         endDate={endDate} setEndDate={setEndDate}
-                        clearDateFilters={clearDateFilters}
+                        clearDateFilters={() => { setStartDate(''); setEndDate(''); }}
                         isScanning={isScanning} handleScan={handleScan}
                         clearAllPosts={clearAllPosts}
                         editingUserId={editingUserId}
