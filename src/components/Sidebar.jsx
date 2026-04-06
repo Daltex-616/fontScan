@@ -1,7 +1,10 @@
 import React from 'react';
 
 const Sidebar = ({ 
-    newUser, setNewUser, newLocation, setNewLocation, handleAddUser,
+    newUser, setNewUser, 
+    newLocation, setNewLocation, 
+    newStatus, setNewStatus, 
+    handleAddUser,
     users, deleteUser, filterValue, setFilterValue, saveCurrentFilter,
     savedFilters, deleteFilter, isScanning, handleScan, clearAllPosts,
     startDate, setStartDate, endDate, setEndDate, 
@@ -9,27 +12,37 @@ const Sidebar = ({
     editingUserId, setEditingUserId, cancelEdit 
 }) => {
     return (
-        <div className="p-3 bg-white rounded shadow-sm border">
+        <div className="p-3 bg-white rounded shadow-sm border h-100 d-flex flex-column">
             <h6 className="fw-bold mb-3 text-primary border-bottom pb-2">INSTA-MONITOR</h6>
             
             {/* FORMULARIO: Crear o Editar */}
             <form onSubmit={handleAddUser} className={`mb-4 p-2 rounded ${editingUserId ? 'bg-light border border-warning' : ''}`}>
                 <label className="small fw-bold text-muted">
-                    {editingUserId ? 'EDITAR UBICACIÓN' : 'MONITOREAR CUENTA'}
+                    {editingUserId ? 'EDITAR CUENTA' : 'MONITOREAR CUENTA'}
                 </label>
                 <div className="mb-1">
                     <input 
-                        type="text" className="form-control form-control-sm mb-1" 
+                        type="text" className="form-control form-control-sm mb-1 shadow-sm" 
                         placeholder="@usuario" value={newUser} 
                         onChange={(e) => setNewUser(e.target.value)} required 
                         disabled={editingUserId} 
                     />
                     <input 
-                        type="text" className="form-control form-control-sm mb-2" 
+                        type="text" className="form-control form-control-sm mb-1 shadow-sm" 
                         placeholder="Ubicación" value={newLocation} 
                         onChange={(e) => setNewLocation(e.target.value)} required 
                         autoFocus={editingUserId}
                     />
+                    
+                    {/* SELECT PARA STATUS SIN EMOTICONES */}
+                    <select 
+                        className="form-select form-select-sm mb-2 shadow-sm"
+                        value={newStatus}
+                        onChange={(e) => setNewStatus(e.target.value)}
+                    >
+                        <option value="publico">Público</option>
+                        <option value="privado">Privado</option>
+                    </select>
                 </div>
                 <button className={`btn btn-sm w-100 fw-bold shadow-sm ${editingUserId ? 'btn-warning' : 'btn-primary'}`}>
                     {editingUserId ? 'Actualizar' : 'Añadir'}
@@ -41,7 +54,7 @@ const Sidebar = ({
                 )}
             </form>
 
-            <hr />
+            <hr className="mt-0"/>
 
             {/* BUSCADOR */}
             <div className="mb-4">
@@ -68,7 +81,7 @@ const Sidebar = ({
 
             <hr />
 
-            {/* FILTRAR FECHAS CORREGIDO */}
+            {/* FILTRAR FECHAS */}
             <div className="mb-4">
                 <div className="d-flex justify-content-between align-items-center mb-1">
                     <label className="small fw-bold text-muted">FILTRAR POR FECHA</label>
@@ -77,7 +90,6 @@ const Sidebar = ({
                     )}
                 </div>
                 
-                {/* Input Desde */}
                 <div className="mb-2">
                     <label className="text-muted mb-0" style={{ fontSize: '0.65rem', display: 'block' }}>DESDE:</label>
                     <input 
@@ -88,14 +100,13 @@ const Sidebar = ({
                     />
                 </div>
 
-                {/* Input Hasta */}
                 <div>
                     <label className="text-muted mb-0" style={{ fontSize: '0.65rem', display: 'block' }}>HASTA:</label>
                     <input 
                         type="date" 
                         className="form-control form-control-sm shadow-sm" 
                         value={endDate} 
-                        min={startDate} // No permite elegir una fecha menor a la de inicio
+                        min={startDate} 
                         onChange={(e) => setEndDate(e.target.value)} 
                     />
                 </div>
@@ -103,14 +114,20 @@ const Sidebar = ({
 
             <hr />
 
-            {/* LISTA DE CUENTAS */}
-            <div className="mb-4">
+            {/* LISTA DE CUENTAS SIN EMOTICONES */}
+            <div className="mb-4 flex-grow-1" style={{minHeight: '0'}}>
                 <label className="small fw-bold text-muted mb-1">CUENTAS ACTIVAS ({users.length})</label>
-                <div className="border rounded p-1 bg-light shadow-inner" style={{ maxHeight: '180px', overflowY: 'auto' }}>
+                <div className="border rounded p-1 bg-light shadow-inner h-100" style={{ overflowY: 'auto', maxHeight: '250px' }}>
                     {users.length > 0 ? users.map(u => (
-                        <div key={u._id} className={`d-flex justify-content-between align-items-center p-1 border-bottom mb-1 rounded ${editingUserId === u._id ? 'bg-warning-subtle border-warning' : 'bg-white'}`} style={{ fontSize: '0.75rem' }}>
+                        <div key={u._id} className={`d-flex justify-content-between align-items-center p-1 border-bottom mb-1 rounded ${editingUserId === u._id ? 'bg-warning-subtle border-warning' : 'bg-white shadow-sm'}`} style={{ fontSize: '0.75rem' }}>
                             <div className="text-truncate d-flex flex-column">
-                                <span className="fw-bold">@{u.username}</span>
+                                <div className="d-flex align-items-center gap-1">
+                                    <span className="fw-bold">@{u.username}</span>
+                                    {/* TEXTO DE STATUS EN LUGAR DE ICONO */}
+                                    <span className="text-uppercase" style={{fontSize: '0.55rem', color: u.status === 'privado' ? '#dc3545' : '#198754'}}>
+                                        ({u.status})
+                                    </span>
+                                </div>
                                 <span className="text-muted small" style={{fontSize: '0.65rem'}}>{u.location}</span>
                             </div>
                             <div className="d-flex gap-2">
