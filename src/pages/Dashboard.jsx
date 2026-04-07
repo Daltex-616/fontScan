@@ -237,6 +237,8 @@ const Dashboard = () => {
                         handleAddUser={handleAddUser}
                         users={users} deleteUser={deleteUser}
                         filterValue={filterValue} 
+                        newStatus={newStatus}
+                        setNewStatus={setNewStatus}
                         setFilterValue={(val) => { setFilterValue(val); setCurrentPageUsers(1); }}
                         saveCurrentFilter={saveCurrentFilter}
                         savedFilters={savedFilters} deleteFilter={deleteFilter}
