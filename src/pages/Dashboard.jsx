@@ -15,6 +15,7 @@ const Dashboard = () => {
     // --- 2. ESTADOS DE FORMULARIO / FILTROS ---
     const [newUser, setNewUser] = useState('');
     const [newLocation, setNewLocation] = useState('');
+    const [newStatus, setNewStatus] = useState('publico'); // NUEVO ESTADO
     const [filterValue, setFilterValue] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -75,20 +76,21 @@ const Dashboard = () => {
     const handleAddUser = async (e) => {
         e.preventDefault();
         try {
+            const userData = { 
+                username: newUser, 
+                location: newLocation,
+                status: newStatus // SE AGREGA EL STATUS AL PAYLOAD
+            };
+
             if (editingUserId) {
-                await api.put(`/users/${editingUserId}`, { 
-                    username: newUser, 
-                    location: newLocation 
-                });
+                await api.put(`/users/${editingUserId}`, userData);
                 setEditingUserId(null);
             } else {
-                await api.post('/users', { 
-                    username: newUser, 
-                    location: newLocation 
-                });
+                await api.post('/users', userData);
             }
             setNewUser('');
             setNewLocation('');
+            setNewStatus('publico'); // RESET STATUS
             fetchData();
         } catch (err) {
             alert(err.response?.data?.msg || "Error en la operación");
@@ -99,12 +101,14 @@ const Dashboard = () => {
         setEditingUserId(user._id);
         setNewUser(user.username);
         setNewLocation(user.location);
+        setNewStatus(user.status || 'publico'); // CARGA STATUS AL EDITAR
     };
 
     const cancelEdit = () => {
         setEditingUserId(null);
         setNewUser('');
         setNewLocation('');
+        setNewStatus('publico'); // RESET STATUS
     };
 
     const deleteUser = async (id) => {
@@ -160,7 +164,6 @@ const Dashboard = () => {
 
     // --- 8. LÓGICA DE NORMALIZACIÓN Y FILTRADO ---
     
-    // Función para normalizar texto: "rio cuarto" -> "Rio Cuarto"
     const normalizeString = (str) => {
         if (!str) return "";
         return str
@@ -212,6 +215,7 @@ const Dashboard = () => {
         const groups = users.map(u => ({
             user: u.username,
             location: u.location,
+            status: u.status, // SE INCLUYE EL STATUS EN EL GRUPO
             posts: filteredPosts.filter(p => p.user === u.username)
         }));
         
@@ -234,11 +238,10 @@ const Dashboard = () => {
                     <Sidebar 
                         newUser={newUser} setNewUser={setNewUser}
                         newLocation={newLocation} setNewLocation={setNewLocation}
+                        newStatus={newStatus} setNewStatus={setNewStatus} // PROPS AGREGADAS
                         handleAddUser={handleAddUser}
                         users={users} deleteUser={deleteUser}
                         filterValue={filterValue} 
-                        newStatus={newStatus}
-                        setNewStatus={setNewStatus}
                         setFilterValue={(val) => { setFilterValue(val); setCurrentPageUsers(1); }}
                         saveCurrentFilter={saveCurrentFilter}
                         savedFilters={savedFilters} deleteFilter={deleteFilter}
@@ -285,7 +288,7 @@ const Dashboard = () => {
                         currentUsersGroup.map((group, idx) => (
                             <UserAccordion 
                                 key={group.user}
-                                group={group}
+                                group={group} // 'group' ya contiene el 'status' gracias al useMemo
                                 isOpened={openIndex === idx}
                                 onToggle={() => setOpenIndex(openIndex === idx ? null : idx)}
                             />

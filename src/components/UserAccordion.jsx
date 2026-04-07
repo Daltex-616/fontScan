@@ -20,10 +20,25 @@ const UserAccordion = ({ group, isOpened, onToggle }) => {
                 onClick={onToggle} 
                 style={{ cursor: 'pointer' }}
             >
-                <span>
-                    👤 @{group.user} 
-                    <small className="text-muted ms-2 fw-normal">| {group.location}</small>
-                </span>
+                <div className="d-flex align-items-center flex-wrap gap-2">
+                    <span>
+                        👤 @{group.user} 
+                        <small className="text-muted ms-2 fw-normal">| {group.location}</small>
+                    </span>
+                    
+                    {/* BADGE DE ESTADO (Personal/Público) */}
+                    <span 
+                        className={`badge border ${
+                            group.status === 'personal' 
+                            ? 'bg-danger-subtle text-danger border-danger' 
+                            : 'bg-success-subtle text-success border-success'
+                        }`}
+                        style={{ fontSize: '0.6rem', textTransform: 'uppercase' }}
+                    >
+                        {group.status || 'publico'}
+                    </span>
+                </div>
+
                 <span className="badge bg-primary rounded-pill">
                     {group.posts.length} posts
                 </span>

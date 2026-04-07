@@ -41,7 +41,7 @@ const Sidebar = ({
                         onChange={(e) => setNewStatus(e.target.value)}
                     >
                         <option value="publico">Público</option>
-                        <option value="privado">Privado</option>
+                        <option value="personal">Personal</option>
                     </select>
                 </div>
                 <button className={`btn btn-sm w-100 fw-bold shadow-sm ${editingUserId ? 'btn-warning' : 'btn-primary'}`}>
@@ -123,10 +123,6 @@ const Sidebar = ({
                             <div className="text-truncate d-flex flex-column">
                                 <div className="d-flex align-items-center gap-1">
                                     <span className="fw-bold">@{u.username}</span>
-                                    {/* TEXTO DE STATUS EN LUGAR DE ICONO */}
-                                    <span className="text-uppercase" style={{fontSize: '0.55rem', color: u.status === 'privado' ? '#dc3545' : '#198754'}}>
-                                        ({u.status})
-                                    </span>
                                 </div>
                                 <span className="text-muted small" style={{fontSize: '0.65rem'}}>{u.location}</span>
                             </div>
