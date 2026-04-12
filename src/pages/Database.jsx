@@ -83,12 +83,13 @@ const Database = ({ posts, users }) => {
                 p.url || ''
             ];
         });
+        const fechaDescarga = new Date().toISOString().split('T')[0]
         const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `reporte_completo.csv`;
+        link.download = `reporte_completo_${fechaDescarga}.csv`;
         link.click();
     };
 
