@@ -28,7 +28,7 @@ const Dashboard = () => {
     const [isScanning, setIsScanning] = useState(false);
     const [openIndex, setOpenIndex] = useState(null);
     const [currentPageUsers, setCurrentPageUsers] = useState(1);
-    const usersPerPage = 6;
+    const usersPerPage = 10;
 
     const navigate = useNavigate();
 
