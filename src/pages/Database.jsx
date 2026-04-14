@@ -1,28 +1,28 @@
-
-import 'bootstrap/dist/css/bootstrap.min.css';
-// AGREGA ESTA LÍNEA:
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import React, { useMemo, useState } from 'react';
 
-const Database = ({ posts, users }) => {
+const Database = ({ posts = [], users = [] }) => {
     // ESTADOS PARA PAGINACIÓN DE HASHTAGS
     const [currentPage, setCurrentPage] = useState(0);
     const hashtagsPerPage = 5;
 
     // 1. LÓGICA DE ANÁLISIS
     const analysis = useMemo(() => {
-        if (!posts || posts.length === 0) return { stats: null, topHashtags: [] };
+        // Inicialización segura para evitar errores de undefined
+        if (!posts || posts.length === 0) {
+            return { 
+                stats: { totalPosts: 0, horaPico: "0", promedio: "0" }, 
+                allHashtags: [] 
+            };
+        }
 
-        // Estadísticas para Widgets
         const horas = posts.map(p => new Date(p.timestamp).getHours());
         const frecHoras = horas.reduce((acc, h) => { acc[h] = (acc[h] || 0) + 1; return acc; }, {});
         const horaPico = Object.keys(frecHoras).length > 0 
             ? Object.keys(frecHoras).reduce((a, b) => frecHoras[a] > frecHoras[b] ? a : b) 
             : "0";
         
-        // Ranking de Hashtags y Difusión
         const hashmap = {};
         posts.forEach(post => {
             if (post.hashtags) {
@@ -56,23 +56,24 @@ const Database = ({ posts, users }) => {
         };
     }, [posts, users]);
 
-    // Lógica de Paginación para Hashtags
-    const totalPages = Math.ceil(analysis.allHashtags.length / hashtagsPerPage);
-    const currentHashtags = analysis.allHashtags.slice(
+    // Lógica de Paginación corregida con Optional Chaining
+    const totalPages = Math.ceil((analysis.allHashtags?.length || 0) / hashtagsPerPage);
+    const currentHashtags = (analysis.allHashtags || []).slice(
         currentPage * hashtagsPerPage, 
         (currentPage + 1) * hashtagsPerPage
     );
 
     // Agrupación para el acordeón de usuarios
     const groupedData = useMemo(() => {
+        if (!users) return [];
         return users.map(u => ({
             ...u,
-            userPosts: posts.filter(p => p.user === u.username)
+            userPosts: (posts || []).filter(p => p.user === u.username)
         })).filter(group => group.userPosts.length > 0);
     }, [posts, users]);
 
-    // Función Exportar CSV
     const exportToCSV = () => {
+        if (!posts.length) return alert("No hay datos para exportar");
         const headers = ["Usuario", "Ubicacion", "Status", "Fecha", "Contenido", "Link IG"];
         const rows = posts.map(p => {
             const u = users.find(user => user.username === p.user);
@@ -83,7 +84,7 @@ const Database = ({ posts, users }) => {
                 p.url || ''
             ];
         });
-        const fechaDescarga = new Date().toISOString().split('T')[0]
+        const fechaDescarga = new Date().toISOString().split('T')[0];
         const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -95,38 +96,34 @@ const Database = ({ posts, users }) => {
 
     return (
         <div className="container-fluid p-4 bg-light min-vh-100">
-            
-            {/* CABECERA */}
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h4 className="fw-bold m-0 text-dark">Panel de Monitoreo</h4>
                 <button onClick={exportToCSV} className="btn btn-success fw-bold shadow-sm">
-                    <i className="bi bi-download me-2"></i>Exportar CSV
+                    Exportar CSV
                 </button>
             </div>
 
-            {/* WIDGETS */}
             <div className="row g-3 mb-4 text-center">
                 <div className="col-md-4">
                     <div className="card border-0 shadow-sm p-3 bg-dark text-white h-100">
                         <small className="opacity-75">REGISTROS</small>
-                        <h3 className="fw-bold mb-0">{analysis.stats?.totalPosts || 0}</h3>
+                        <h3 className="fw-bold mb-0">{analysis.stats.totalPosts}</h3>
                     </div>
                 </div>
                 <div className="col-md-4">
                     <div className="card border-0 shadow-sm p-3 bg-white h-100">
-                        <small className="text-muted text-uppercase small">Hora de Mayor Tráfico</small>
-                        <h3 className="fw-bold mb-0 text-primary">{analysis.stats?.horaPico}:00hs</h3>
+                        <small className="text-muted text-uppercase small">Hora Pico</small>
+                        <h3 className="fw-bold mb-0 text-primary">{analysis.stats.horaPico}:00hs</h3>
                     </div>
                 </div>
                 <div className="col-md-4">
                     <div className="card border-0 shadow-sm p-3 bg-white h-100">
-                        <small className="text-muted text-uppercase small">Posts por Cuenta</small>
-                        <h3 className="fw-bold mb-0 text-success">{analysis.stats?.promedio}</h3>
+                        <small className="text-muted text-uppercase small">Promedio p/ Cuenta</small>
+                        <h3 className="fw-bold mb-0 text-success">{analysis.stats.promedio}</h3>
                     </div>
                 </div>
             </div>
 
-            {/* TABLA DE TENDENCIAS (CON PAGINACIÓN) */}
             <div className="card border-0 shadow-sm mb-4">
                 <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h6 className="mb-0 fw-bold">Tendencias de Contenido</h6>
@@ -153,11 +150,11 @@ const Database = ({ posts, users }) => {
                             <tr>
                                 <th className="ps-4">Hashtag</th>
                                 <th>Impacto</th>
-                                <th>Difusión (Cuentas)</th>
+                                <th>Difusión</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {currentHashtags.map((item, idx) => (
+                            {currentHashtags.length > 0 ? currentHashtags.map((item, idx) => (
                                 <tr key={idx}>
                                     <td className="ps-4 fw-bold text-primary">{item.tag}</td>
                                     <td>
@@ -172,31 +169,17 @@ const Database = ({ posts, users }) => {
                                         </div>
                                     </td>
                                     <td>
-                                        {item.authors.length <= 2 ? (
-                                            item.authors.map((u, i) => (
-                                                <span key={i} className="badge bg-light text-dark border me-1 fw-normal">@{u}</span>
-                                            ))
-                                        ) : (
-                                            <details className="position-relative">
-                                                <summary className="text-primary small fw-bold" style={{ cursor: 'pointer', listStyle: 'none' }}>
-                                                    @{item.authors[0]} y {item.authors.length - 1} más...
-                                                </summary>
-                                                <div className="position-absolute bg-white border shadow-sm p-2 rounded mt-1" style={{ zIndex: 100, minWidth: '150px' }}>
-                                                    {item.authors.map((u, i) => (
-                                                        <div key={i} className="small border-bottom py-1">@{u}</div>
-                                                    ))}
-                                                </div>
-                                            </details>
-                                        )}
+                                        <span className="small text-muted">{item.authors.length} cuentas</span>
                                     </td>
                                 </tr>
-                            ))}
+                            )) : (
+                                <tr><td colSpan="3" className="text-center py-3 text-muted">No hay tendencias disponibles</td></tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            {/* ACORDEÓN DE CUENTAS CON STATUS DINÁMICO */}
             <h6 className="fw-bold text-muted mb-3">DESGLOSE POR CUENTA</h6>
             <div className="accordion shadow-sm" id="mainAcc">
                 {groupedData.map((group, index) => (
@@ -206,12 +189,7 @@ const Database = ({ posts, users }) => {
                                 <div className="d-flex justify-content-between align-items-center w-100 me-3">
                                     <div>
                                         <span className="fw-bold text-dark">@{group.username}</span>
-                                        {/* TU CÓDIGO DE COLORES APLICADO AQUÍ */}
-                                        <span className={`badge border ms-3 fw-normal ${
-                                            group.status === 'personal' 
-                                            ? 'bg-danger-subtle text-danger border-danger' 
-                                            : 'bg-success-subtle text-success border-success'
-                                        }`}>
+                                        <span className={`badge border ms-3 fw-normal ${group.status === 'personal' ? 'bg-danger-subtle text-danger border-danger' : 'bg-success-subtle text-success border-success'}`}>
                                             {group.status || 'público'}
                                         </span>
                                     </div>
@@ -222,13 +200,6 @@ const Database = ({ posts, users }) => {
                         <div id={`c${index}`} className="accordion-collapse collapse" data-bs-parent="#mainAcc">
                             <div className="accordion-body p-0">
                                 <table className="table table-hover mb-0" style={{ fontSize: '0.8rem' }}>
-                                    <thead className="table-light text-muted">
-                                        <tr>
-                                            <th className="ps-4">FECHA</th>
-                                            <th>DETALLES</th>
-                                            <th className="text-center">LINK</th>
-                                        </tr>
-                                    </thead>
                                     <tbody>
                                         {group.userPosts.map((p) => (
                                             <tr key={p._id}>

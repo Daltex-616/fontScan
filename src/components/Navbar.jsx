@@ -18,6 +18,10 @@ const Navbar = () => {
                     >
                         📊 Monitor
                     </Link>
+                    <Link to="/users" className={`btn btn-sm ${location.pathname === '/users' ? 'btn-primary' : 'btn-outline-light border-0'}`}
+                    >
+                        🧾 Cuentas
+                    </Link>
                     <Link 
                         to="/database" 
                         className={`btn btn-sm ${location.pathname === '/database' ? 'btn-primary' : 'btn-outline-light border-0'}`}
