@@ -7,24 +7,14 @@ import Sidebar from '../components/Sidebar';
 import UserAccordion from '../components/UserAccordion';
 
 const Dashboard = () => {
-    // --- 1. ESTADOS DE DATOS ---
+    // --- ESTADOS ---
     const [posts, setPosts] = useState([]);
     const [users, setUsers] = useState([]);
     const [savedFilters, setSavedFilters] = useState([]);
-
-    // --- 2. ESTADOS DE FORMULARIO / FILTROS ---
-    const [newUser, setNewUser] = useState('');
-    const [newLocation, setNewLocation] = useState('');
-    const [newStatus, setNewStatus] = useState('publico'); // NUEVO ESTADO
     const [filterValue, setFilterValue] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [filterLocation, setFilterLocation] = useState('');
-
-    // --- 3. ESTADO DE EDICIÓN ---
-    const [editingUserId, setEditingUserId] = useState(null);
-
-    // --- 4. ESTADOS DE UI ---
     const [isScanning, setIsScanning] = useState(false);
     const [openIndex, setOpenIndex] = useState(null);
     const [currentPageUsers, setCurrentPageUsers] = useState(1);
@@ -32,12 +22,11 @@ const Dashboard = () => {
 
     const navigate = useNavigate();
 
-    // --- CARGA INICIAL Y POLLING ---
+    // --- EFECTOS ---
     useEffect(() => {
         fetchData();
         fetchFilters();
         checkScanStatus();
-        
         const interval = setInterval(checkScanStatus, 5000);
         return () => clearInterval(interval);
     }, []);
@@ -59,9 +48,7 @@ const Dashboard = () => {
         try { 
             const res = await api.get('/filters'); 
             setSavedFilters(res.data); 
-        } catch (e) {
-            console.error("Error al cargar filtros guardados");
-        }
+        } catch (e) { console.error("Error filtros"); }
     };
 
     const checkScanStatus = async () => {
@@ -72,64 +59,12 @@ const Dashboard = () => {
         } catch (e) {}
     };
 
-    // --- 5. ACCIONES DE USUARIOS ---
-    const handleAddUser = async (e) => {
-        e.preventDefault();
-        try {
-            const userData = { 
-                username: newUser, 
-                location: newLocation,
-                status: newStatus // SE AGREGA EL STATUS AL PAYLOAD
-            };
-
-            if (editingUserId) {
-                await api.put(`/users/${editingUserId}`, userData);
-                setEditingUserId(null);
-            } else {
-                await api.post('/users', userData);
-            }
-            setNewUser('');
-            setNewLocation('');
-            setNewStatus('publico'); // RESET STATUS
-            fetchData();
-        } catch (err) {
-            alert(err.response?.data?.msg || "Error en la operación");
-        }
-    };
-
-    const startEditUser = (user) => {
-        setEditingUserId(user._id);
-        setNewUser(user.username);
-        setNewLocation(user.location);
-        setNewStatus(user.status || 'publico'); // CARGA STATUS AL EDITAR
-    };
-
-    const cancelEdit = () => {
-        setEditingUserId(null);
-        setNewUser('');
-        setNewLocation('');
-        setNewStatus('publico'); // RESET STATUS
-    };
-
-    const deleteUser = async (id) => {
-        if (window.confirm('¿Eliminar esta cuenta?')) {
-            try {
-                await api.delete(`/users/${id}`);
-                fetchData();
-            } catch (err) {
-                console.error("Error al borrar usuario");
-            }
-        }
-    };
-
-    // --- 6. ACCIONES DE BOT ---
+    // --- ACCIONES ---
     const handleScan = async () => {
         try {
             await api.post('/posts/scan');
             setIsScanning(true);
-        } catch (e) {
-            alert("Ya hay un escaneo en curso.");
-        }
+        } catch (e) { alert("Escaneo en curso."); }
     };
 
     const clearAllPosts = async () => {
@@ -138,21 +73,16 @@ const Dashboard = () => {
                 await api.post('/posts/clear-history'); 
                 setPosts([]);
                 fetchData();
-            } catch (err) {
-                console.error("Error al vaciar historial");
-            }
+            } catch (err) { console.error("Error clear"); }
         }
     };
 
-    // --- 7. GESTIÓN DE FILTROS ---
     const saveCurrentFilter = async () => {
         if (!filterValue.trim()) return;
         try {
             await api.post('/filters', { tag: filterValue.trim() });
             fetchFilters();
-        } catch (e) {
-            alert("Este filtro ya existe.");
-        }
+        } catch (e) { alert("Filtro ya existe."); }
     };
 
     const deleteFilter = async (id) => {
@@ -162,22 +92,14 @@ const Dashboard = () => {
         } catch (e) {}
     };
 
-    // --- 8. LÓGICA DE NORMALIZACIÓN Y FILTRADO ---
-    
+    // --- LÓGICA DE FILTRADO ---
     const normalizeString = (str) => {
         if (!str) return "";
-        return str
-            .trim()
-            .toLowerCase()
-            .split(' ')
-            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-            .join(' ');
+        return str.trim().toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     };
 
     const uniqueLocations = useMemo(() => {
-        const locs = users
-            .map(u => normalizeString(u.location))
-            .filter(Boolean);
+        const locs = users.map(u => normalizeString(u.location)).filter(Boolean);
         return [...new Set(locs)].sort();
     }, [users]);
 
@@ -188,7 +110,6 @@ const Dashboard = () => {
         return posts.filter(p => {
             const matchesText = !search || 
                 p.hashtags?.toLowerCase().includes(search) || 
-                p.mentions?.toLowerCase().includes(search) ||
                 p.user?.toLowerCase().includes(search);
             
             const userObj = users.find(u => u.username === p.user);
@@ -215,61 +136,52 @@ const Dashboard = () => {
         const groups = users.map(u => ({
             user: u.username,
             location: u.location,
-            status: u.status, // SE INCLUYE EL STATUS EN EL GRUPO
+            status: u.status,
             posts: filteredPosts.filter(p => p.user === u.username)
         }));
-        
         return (filterValue || filterLocation || startDate || endDate) 
-            ? groups.filter(g => g.posts.length > 0) 
-            : groups;
+            ? groups.filter(g => g.posts.length > 0) : groups;
     }, [users, filteredPosts, filterValue, filterLocation, startDate, endDate]);
 
-    // Paginación
     const totalUserPages = Math.ceil(groupedPosts.length / usersPerPage);
-    const currentUsersGroup = groupedPosts.slice(
-        (currentPageUsers - 1) * usersPerPage, 
-        currentPageUsers * usersPerPage
-    );
+    const currentUsersGroup = groupedPosts.slice((currentPageUsers - 1) * usersPerPage, currentPageUsers * usersPerPage);
 
     return (
-        <div className="container-fluid bg-light" style={{ minHeight: '100vh', padding: '20px' }}>
-            <div className="row">
-                <div className="col-lg-3">
-                    <Sidebar 
-                        newUser={newUser} setNewUser={setNewUser}
-                        newLocation={newLocation} setNewLocation={setNewLocation}
-                        newStatus={newStatus} setNewStatus={setNewStatus} // PROPS AGREGADAS
-                        handleAddUser={handleAddUser}
-                        users={users} deleteUser={deleteUser}
-                        filterValue={filterValue} 
-                        setFilterValue={(val) => { setFilterValue(val); setCurrentPageUsers(1); }}
-                        saveCurrentFilter={saveCurrentFilter}
-                        savedFilters={savedFilters} deleteFilter={deleteFilter}
-                        startDate={startDate} setStartDate={setStartDate}
-                        endDate={endDate} setEndDate={setEndDate}
-                        clearDateFilters={() => { setStartDate(''); setEndDate(''); }}
-                        isScanning={isScanning} handleScan={handleScan}
-                        clearAllPosts={clearAllPosts}
-                        editingUserId={editingUserId}
-                        setEditingUserId={startEditUser}
-                        cancelEdit={cancelEdit}
-                    />
-                </div>
+        <div className="d-flex bg-light" style={{ minHeight: '100vh' }}>
+            
+            <Sidebar 
+                filterValue={filterValue} 
+                setFilterValue={(val) => { setFilterValue(val); setCurrentPageUsers(1); }}
+                saveCurrentFilter={saveCurrentFilter}
+                savedFilters={savedFilters} 
+                deleteFilter={deleteFilter}
+                startDate={startDate} 
+                setStartDate={setStartDate}
+                endDate={endDate} 
+                setEndDate={setEndDate}
+                clearDateFilters={() => { setStartDate(''); setEndDate(''); }}
+                isScanning={isScanning} 
+                handleScan={handleScan}
+                clearAllPosts={clearAllPosts}
+            />
 
-                <div className="col-lg-9">
+            <div className="flex-grow-1 p-4" style={{ overflowX: 'hidden' }}>
+                <div className="container-fluid p-0">
+                    
+                    {/* TOP BAR */}
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3 bg-white p-3 rounded shadow-sm border">
-                        <h4 className="fw-bold mb-0">
+                        <h4 className="fw-bold mb-0 text-dark">
                             Monitor de Actividad 
-                            <span className="badge bg-primary ms-2" style={{fontSize:'0.8rem'}}>
-                                {filteredPosts.length} resultados
+                            <span className="badge bg-primary ms-2" style={{fontSize:'0.75rem'}}>
+                                {filteredPosts.length} registros
                             </span>
                         </h4>
 
                         <div className="d-flex align-items-center gap-2">
-                            <label className="small fw-bold text-muted text-nowrap">ZONA:</label>
+                            <label className="small fw-bold text-muted">ZONA:</label>
                             <select 
                                 className="form-select form-select-sm shadow-sm" 
-                                style={{ width: '200px', borderRadius: '8px' }}
+                                style={{ width: '220px', borderRadius: '8px' }}
                                 value={filterLocation}
                                 onChange={(e) => { setFilterLocation(e.target.value); setCurrentPageUsers(1); }}
                             >
@@ -278,38 +190,37 @@ const Dashboard = () => {
                                     <option key={loc} value={loc}>{loc}</option>
                                 ))}
                             </select>
-                            {filterLocation && (
-                                <button className="btn btn-sm btn-link text-danger p-0 fw-bold text-decoration-none" onClick={() => setFilterLocation('')}>✕</button>
-                            )}
                         </div>
                     </div>
 
+                    {/* ACORDEONES */}
                     {currentUsersGroup.length > 0 ? (
                         currentUsersGroup.map((group, idx) => (
                             <UserAccordion 
                                 key={group.user}
-                                group={group} // 'group' ya contiene el 'status' gracias al useMemo
+                                group={group}
                                 isOpened={openIndex === idx}
                                 onToggle={() => setOpenIndex(openIndex === idx ? null : idx)}
                             />
                         ))
                     ) : (
-                        <div className="text-center p-5 bg-white rounded shadow-sm border">
-                            <h5 className="text-muted">Sin coincidencias</h5>
-                            <p className="small text-muted mb-0">Ajusta los filtros o selecciona otra localidad.</p>
+                        <div className="text-center p-5 bg-white rounded shadow-sm border my-5">
+                            <h5 className="text-muted">No se encontraron resultados</h5>
+                            <p className="small text-muted">Intenta cambiar los filtros del sidebar.</p>
                         </div>
                     )}
 
+                    {/* PAGINACIÓN */}
                     {totalUserPages > 1 && (
-                        <div className="d-flex justify-content-center align-items-center mt-4 mb-5">
+                        <div className="d-flex justify-content-center align-items-center mt-5 mb-5">
                             <button 
-                                className="btn btn-sm btn-outline-primary me-3" 
+                                className="btn btn-sm btn-outline-primary shadow-sm me-3 px-3" 
                                 disabled={currentPageUsers === 1}
                                 onClick={() => { setCurrentPageUsers(p => p - 1); window.scrollTo(0,0); }}
                             >← Anterior</button>
                             <span className="fw-bold text-muted small">Página {currentPageUsers} de {totalUserPages}</span>
                             <button 
-                                className="btn btn-sm btn-outline-primary ms-3" 
+                                className="btn btn-sm btn-outline-primary shadow-sm ms-3 px-3" 
                                 disabled={currentPageUsers === totalUserPages}
                                 onClick={() => { setCurrentPageUsers(p => p + 1); window.scrollTo(0,0); }}
                             >Siguiente →</button>
