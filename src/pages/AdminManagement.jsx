@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { ShieldCheck, Edit3, Trash2, Download, Upload, LogOut } from 'lucide-react';
+import { ShieldCheck, Edit3, Trash2, Download, Upload, Loader2 } from 'lucide-react';
 import { exportPostsToCSV, parseCSV } from '../utils/csvHelper';
 
 const AdminManagement = () => {
@@ -76,26 +76,41 @@ const AdminManagement = () => {
         } catch (e) { alert("No se pudo eliminar"); }
     };
 
-    // FUNCIÓN DE SINCRONIZACIÓN MASIVA (UPSERT)
+    // --- FUNCIÓN DE IMPORTACIÓN REFORZADA ---
     const handleImport = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        if (window.confirm("¿Deseas sincronizar los datos? Se actualizarán los links de media existentes y se crearán los nuevos posts.")) {
+        const confirmMsg = "¿Deseas sincronizar los datos?\n\n- Se actualizarán links de media existentes.\n- Se crearán los nuevos posts.\n- Este proceso puede tardar unos segundos.";
+        
+        if (window.confirm(confirmMsg)) {
             setLoading(true);
             try {
+                // Parseamos el CSV a JSON
                 const dataArray = await parseCSV(file);
-                // El backend ahora usa bulkWrite para hacer el Upsert
-                const response = await api.post('/posts/bulk', { posts: dataArray });
                 
-                alert(`Sincronización exitosa:\n- Nuevos registros: ${response.data.inserted}\n- Links actualizados: ${response.data.updated}`);
+                // Petición al backend con configuración de tiempo de espera ampliada
+                const response = await api.post('/posts/bulk', 
+                    { posts: dataArray }, 
+                    { timeout: 60000 } // 60 segundos de espera para archivos grandes
+                );
+                
+                const { inserted, updated } = response.data;
+                alert(`✅ Sincronización Exitosa:\n\n- Nuevos registros: ${inserted}\n- Registros actualizados: ${updated}`);
                 
                 fetchPosts(); 
             } catch (err) {
-                alert("Error al procesar el archivo CSV o fallo en el servidor");
+                console.error("Error en Bulk Import:", err);
+                if (err.code === 'ECONNABORTED') {
+                    alert("⏳ El servidor está tardando demasiado. Es probable que los datos se estén procesando en segundo plano, revisa en unos minutos.");
+                } else if (err.response?.status === 413) {
+                    alert("❌ El archivo es demasiado pesado para el servidor.");
+                } else {
+                    alert(err.response?.data?.msg || "❌ Error crítico al sincronizar la base de datos.");
+                }
             } finally {
                 setLoading(false);
-                e.target.value = null; 
+                e.target.value = null; // Limpiar el input file
             }
         }
     };
@@ -108,7 +123,7 @@ const AdminManagement = () => {
                     <h4 className="text-center fw-bold mb-4">Panel de Seguridad</h4>
                     <form onSubmit={handleVerify}>
                         <div className="mb-3">
-                            <input type="text" className="form-control" placeholder="Nombre de usuario" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} required />
+                            <input type="text" className="form-control" placeholder="Usuario" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} required />
                         </div>
                         <div className="mb-3">
                             <input type="password" className="form-control" placeholder="Contraseña" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} required />
@@ -134,12 +149,17 @@ const AdminManagement = () => {
                         <button 
                             className="btn btn-outline-dark d-flex align-items-center gap-2 fw-semibold"
                             onClick={() => exportPostsToCSV(posts)}
+                            disabled={loading}
                         >
                             <Download size={18} /> Exportar Backup
                         </button>
                         
-                        <label className={`btn btn-success d-flex align-items-center gap-2 fw-semibold ${loading ? 'disabled' : ''}`}>
-                            {loading ? 'Procesando...' : <><Upload size={18} /> Sincronización Masiva</>}
+                        <label className={`btn btn-success d-flex align-items-center gap-2 fw-semibold ${loading ? 'disabled' : ''}`} style={{ cursor: loading ? 'not-allowed' : 'pointer' }}>
+                            {loading ? (
+                                <><Loader2 size={18} className="animate-spin" /> Procesando...</>
+                            ) : (
+                                <><Upload size={18} /> Sincronización Masiva</>
+                            )}
                             <input type="file" accept=".csv" hidden onChange={handleImport} disabled={loading} />
                         </label>
                     </div>
@@ -147,7 +167,7 @@ const AdminManagement = () => {
             </div>
 
             <div className="row">
-                {/* LADO IZQUIERDO: FORMULARIO ADMINS */}
+                {/* FORMULARIO ADMINS */}
                 <div className="col-md-4">
                     <div className="card shadow-sm p-4 border-0 mb-4">
                         <h5 className="fw-bold mb-3">{editingId ? 'Editar Admin' : 'Nuevo Administrador'}</h5>
@@ -172,7 +192,7 @@ const AdminManagement = () => {
                     </div>
                 </div>
 
-                {/* LADO DERECHO: LISTA DE ADMINS */}
+                {/* TABLA DE ADMINS */}
                 <div className="col-md-8">
                     <div className="card shadow-sm border-0 overflow-hidden">
                         <div className="p-3 bg-white border-bottom">
@@ -193,18 +213,10 @@ const AdminManagement = () => {
                                                 <div className="fw-bold text-dark">{a.username}</div>
                                             </td>
                                             <td className="text-end pe-4">
-                                                <button 
-                                                    className="btn btn-sm btn-outline-primary me-2 border-0"
-                                                    onClick={() => {setEditingId(a._id); setForm({user: a.username, pass: ''})}}
-                                                    title="Editar"
-                                                >
+                                                <button className="btn btn-sm btn-outline-primary me-2 border-0" onClick={() => {setEditingId(a._id); setForm({user: a.username, pass: ''})}}>
                                                     <Edit3 size={17}/>
                                                 </button>
-                                                <button 
-                                                    className="btn btn-sm btn-outline-danger border-0"
-                                                    onClick={() => deleteAdmin(a._id)}
-                                                    title="Eliminar"
-                                                >
+                                                <button className="btn btn-sm btn-outline-danger border-0" onClick={() => deleteAdmin(a._id)}>
                                                     <Trash2 size={17}/>
                                                 </button>
                                             </td>
