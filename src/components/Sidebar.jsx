@@ -82,20 +82,6 @@ const Sidebar = ({
 
                 <hr />
             </div>
-
-            {/* SECCIÓN INFERIOR - ACCIONES */}
-            <div className={`mt-auto p-3 bg-light border-top ${isOpen ? 'd-block' : 'd-none'}`}>
-                <button 
-                    className={`btn btn-sm w-100 mb-2 fw-bold shadow-sm ${isScanning ? 'btn-warning border' : 'btn-dark'}`} 
-                    onClick={handleScan} 
-                    disabled={isScanning}
-                >
-                    {isScanning ? '🔄 ESCANEANDO...' : '🚀 ESCANEAR AHORA'}
-                </button>
-                <button className="btn btn-outline-danger btn-sm w-100 fw-bold border-0" onClick={clearAllPosts}>
-                    Vaciar Historial
-                </button>
-            </div>
         </div>
     );
 };

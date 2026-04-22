@@ -1,15 +1,40 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import api from '../services/api'; // Ajusta la ruta según tu proyecto
 
 const Database = ({ posts = [], users = [] }) => {
-    // ESTADOS PARA PAGINACIÓN DE HASHTAGS
     const [currentPage, setCurrentPage] = useState(0);
+    const [lastSync, setLastSync] = useState("");
     const hashtagsPerPage = 5;
 
-    // 1. LÓGICA DE ANÁLISIS
+    // 1. CARGAR Y FORMATEAR FECHA
+    useEffect(() => {
+        const fetchUpdateDate = async () => {
+            try {
+                const res = await api.get('/posts/last-update');
+                if (res.data && res.data.date) {
+                    const d = new Date(res.data.date);
+                    
+                    // Formateo manual para que diga exactamente lo que pediste
+                    const fecha = d.toLocaleDateString('es-AR', { 
+                        day: '2-digit', month: '2-digit', year: 'numeric' 
+                    });
+                    const hora = d.toLocaleTimeString('es-AR', { 
+                        hour: '2-digit', minute: '2-digit' 
+                    });
+
+                    setLastSync(`ultima actualizacion: ${fecha} a las ${hora}`);
+                }
+            } catch (e) {
+                console.error("Error al obtener la fecha");
+            }
+        };
+        fetchUpdateDate();
+    }, []);
+
+    // 2. LÓGICA DE ANÁLISIS DE DATOS
     const analysis = useMemo(() => {
-        // Inicialización segura para evitar errores de undefined
         if (!posts || posts.length === 0) {
             return { 
                 stats: { totalPosts: 0, horaPico: "0", promedio: "0" }, 
@@ -56,14 +81,12 @@ const Database = ({ posts = [], users = [] }) => {
         };
     }, [posts, users]);
 
-    // Lógica de Paginación corregida con Optional Chaining
     const totalPages = Math.ceil((analysis.allHashtags?.length || 0) / hashtagsPerPage);
     const currentHashtags = (analysis.allHashtags || []).slice(
         currentPage * hashtagsPerPage, 
         (currentPage + 1) * hashtagsPerPage
     );
 
-    // Agrupación para el acordeón de usuarios
     const groupedData = useMemo(() => {
         if (!users) return [];
         return users.map(u => ({
@@ -84,25 +107,32 @@ const Database = ({ posts = [], users = [] }) => {
                 p.url || ''
             ];
         });
-        const fechaDescarga = new Date().toISOString().split('T')[0];
         const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = url;
-        link.download = `reporte_completo_${fechaDescarga}.csv`;
+        link.href = URL.createObjectURL(blob);
+        link.download = `reporte_completo.csv`;
         link.click();
     };
 
     return (
         <div className="container-fluid p-4 bg-light min-vh-100">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h4 className="fw-bold m-0 text-dark">Panel de Monitoreo</h4>
+            {/* ENCABEZADO */}
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+                <div>
+                    <h4 className="fw-bold m-0 text-dark">Panel de Monitoreo</h4>
+                    {lastSync && (
+                        <p className="text-muted small mb-0 mt-1" style={{ textTransform: 'lowercase' }}>
+                            {lastSync}
+                        </p>
+                    )}
+                </div>
                 <button onClick={exportToCSV} className="btn btn-success fw-bold shadow-sm">
                     Exportar CSV
                 </button>
             </div>
 
+            {/* TARJETAS DE ESTADÍSTICAS */}
             <div className="row g-3 mb-4 text-center">
                 <div className="col-md-4">
                     <div className="card border-0 shadow-sm p-3 bg-dark text-white h-100">
@@ -124,24 +154,13 @@ const Database = ({ posts = [], users = [] }) => {
                 </div>
             </div>
 
+            {/* TABLA DE HASHTAGS CON DIFUSIÓN MEJORADA */}
             <div className="card border-0 shadow-sm mb-4">
                 <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h6 className="mb-0 fw-bold">Tendencias de Contenido</h6>
-                    <div className="btn-group shadow-sm">
-                        <button 
-                            className="btn btn-outline-secondary btn-sm" 
-                            disabled={currentPage === 0}
-                            onClick={() => setCurrentPage(currentPage - 1)}
-                        >
-                            Anterior
-                        </button>
-                        <button 
-                            className="btn btn-outline-secondary btn-sm" 
-                            disabled={currentPage >= totalPages - 1}
-                            onClick={() => setCurrentPage(currentPage + 1)}
-                        >
-                            Siguiente
-                        </button>
+                    <div className="btn-group">
+                        <button className="btn btn-outline-secondary btn-sm" disabled={currentPage === 0} onClick={() => setCurrentPage(currentPage - 1)}>Anterior</button>
+                        <button className="btn btn-outline-secondary btn-sm" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(currentPage + 1)}>Siguiente</button>
                     </div>
                 </div>
                 <div className="table-responsive">
@@ -150,36 +169,39 @@ const Database = ({ posts = [], users = [] }) => {
                             <tr>
                                 <th className="ps-4">Hashtag</th>
                                 <th>Impacto</th>
-                                <th>Difusión</th>
+                                <th>Difusión (Cuentas que lo usaron)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {currentHashtags.length > 0 ? currentHashtags.map((item, idx) => (
+                            {currentHashtags.map((item, idx) => (
                                 <tr key={idx}>
                                     <td className="ps-4 fw-bold text-primary">{item.tag}</td>
                                     <td>
                                         <div className="d-flex align-items-center" style={{ width: '120px' }}>
-                                            <div className="progress flex-grow-1 me-2" style={{ height: '6px' }}>
-                                                <div 
-                                                    className="progress-bar bg-primary" 
-                                                    style={{ width: `${(item.count / analysis.stats.totalPosts) * 100}%` }}
-                                                ></div>
+                                            <span className="fw-bold me-2">{item.count}</span>
+                                            <div className="progress flex-grow-1" style={{ height: '6px' }}>
+                                                <div className="progress-bar bg-primary" style={{ width: `${(item.count / analysis.stats.totalPosts) * 100}%` }}></div>
                                             </div>
-                                            <span className="fw-bold">{item.count}</span>
                                         </div>
                                     </td>
                                     <td>
-                                        <span className="small text-muted">{item.authors.length} cuentas</span>
+                                        {/* Contenedor scrolleable para no romper la UI */}
+                                        <div className="d-flex flex-wrap gap-1" style={{ maxHeight: '65px', overflowY: 'auto', padding: '2px' }}>
+                                            {item.authors.map((author, aIdx) => (
+                                                <span key={aIdx} className="badge bg-light text-dark border fw-normal" style={{fontSize: '0.75rem'}}>
+                                                    @{author}
+                                                </span>
+                                            ))}
+                                        </div>
                                     </td>
                                 </tr>
-                            )) : (
-                                <tr><td colSpan="3" className="text-center py-3 text-muted">No hay tendencias disponibles</td></tr>
-                            )}
+                            ))}
                         </tbody>
                     </table>
                 </div>
             </div>
 
+            {/* ACORDEÓN DE USUARIOS */}
             <h6 className="fw-bold text-muted mb-3">DESGLOSE POR CUENTA</h6>
             <div className="accordion shadow-sm" id="mainAcc">
                 {groupedData.map((group, index) => (
@@ -189,7 +211,7 @@ const Database = ({ posts = [], users = [] }) => {
                                 <div className="d-flex justify-content-between align-items-center w-100 me-3">
                                     <div>
                                         <span className="fw-bold text-dark">@{group.username}</span>
-                                        <span className={`badge border ms-3 fw-normal ${group.status === 'personal' ? 'bg-danger-subtle text-danger border-danger' : 'bg-success-subtle text-success border-success'}`}>
+                                        <span className={`badge ms-3 ${group.status === 'personal' ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'}`}>
                                             {group.status || 'público'}
                                         </span>
                                     </div>
@@ -204,8 +226,8 @@ const Database = ({ posts = [], users = [] }) => {
                                         {group.userPosts.map((p) => (
                                             <tr key={p._id}>
                                                 <td className="ps-4 text-nowrap">{new Date(p.timestamp).toLocaleDateString()}</td>
-                                                <td className="text-muted text-truncate" style={{maxWidth: '350px'}}>{p.hashtags || p.caption || "Sin texto"}</td>
-                                                <td className="text-center">
+                                                <td className="text-muted text-truncate" style={{maxWidth: '350px'}}>{p.hashtags || "Sin texto"}</td>
+                                                <td className="text-end pe-4">
                                                     <a href={p.url} target="_blank" rel="noreferrer" className="btn btn-sm btn-link py-0 fw-bold">Ver IG</a>
                                                 </td>
                                             </tr>
