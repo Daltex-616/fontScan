@@ -3,9 +3,13 @@ import React from 'react';
 const PostCard = ({ post }) => {
     // Función para formatear la fecha del timestamp
     const formatTimestamp = (dateValue) => {
+        // IMPORTANTE: Si dateValue no existe o es nulo, devuelve "Fecha no capturada"
         if (!dateValue) return "Reciente";
         
         const date = new Date(dateValue);
+        
+        // Verificamos si la fecha es válida
+        if (isNaN(date.getTime())) return "Fecha Inválida";
         
         // Formateamos: "18/03/2026 12:20" (Día/Mes/Año Hora:Minuto)
         return date.toLocaleString('es-AR', {
@@ -14,7 +18,7 @@ const PostCard = ({ post }) => {
             year: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false // Para que sea formato 24hs
+            hour12: false // Formato 24hs
         });
     };
 
@@ -39,8 +43,8 @@ const PostCard = ({ post }) => {
                     <span className="mention-text">{post.mentions || '@SinMenciones'}</span>
                 </div>
                 <div className="text-muted mt-2 border-top pt-2" style={{ fontSize: '0.7rem' }}>
-                    {/* CAMBIAMOS post.igDate por post.timestamp */}
-                    🗓️ {formatTimestamp(post.timestamp)}
+                    {/* CORRECCIÓN AQUÍ: Usamos igDate que es el campo real de tu DB */}
+                    🗓️ {formatTimestamp(post.igDate)}
                 </div>
             </div>
 
