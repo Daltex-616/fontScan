@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
-import { ShieldCheck, Edit3, Trash2, Download, Upload, Loader2, Play } from "lucide-react";
+// Añadimos el icono RefreshCw para el nuevo botón
+import { ShieldCheck, Edit3, Trash2, Download, Upload, Loader2, Play, RefreshCw } from "lucide-react";
 import { exportPostsToCSV, parseCSV } from "../utils/csvHelper";
 
 const AdminManagement = () => {
@@ -12,6 +13,8 @@ const AdminManagement = () => {
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  // --- NUEVO ESTADO PARA EL REFRESCO ---
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -35,12 +38,10 @@ const AdminManagement = () => {
     } catch (e) { console.error("Error cargando posts"); }
   };
 
-  // --- RUTAS CORREGIDAS SEGÚN TU DASHBOARD ---
   const handleScan = async () => {
     if (!window.confirm("¿Iniciar escaneo de Instagram ahora?")) return;
     setIsScanning(true);
     try {
-      // Usando la ruta exacta de tu Dashboard
       await api.post('/posts/scan'); 
       alert("🚀 El proceso de escaneo ha iniciado.");
     } catch (e) { 
@@ -50,11 +51,24 @@ const AdminManagement = () => {
     }
   };
 
+  // --- NUEVA FUNCIÓN PARA EL REFRESCO DE IMÁGENES ---
+  const handleRefreshMedia = async () => {
+    if (!window.confirm("¿Refrescar todas las imágenes? Esto actualizará los links caducados.")) return;
+    setIsRefreshing(true);
+    try {
+      await api.post('/posts/refresh-media'); 
+      alert("🔄 El proceso de refresco de links ha iniciado.");
+    } catch (e) { 
+      alert("Error al iniciar el refresco o proceso ya en curso."); 
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const clearAllPosts = async () => {
     if (!window.confirm('¿Vaciar historial por completo?')) return;
     setIsScanning(true);
     try {
-      // Usando la ruta exacta de tu Dashboard (es un POST según tu código)
       await api.post('/posts/clear-history'); 
       setPosts([]);
       alert("🗑️ Historial vaciado.");
@@ -66,7 +80,6 @@ const AdminManagement = () => {
     }
   };
 
-  // --- GESTIÓN DE CUENTAS (Restaurado) ---
   const handleAdminSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -134,18 +147,25 @@ const AdminManagement = () => {
 
   return (
     <div className="container mt-5 pb-5">
-      {/* TOOLBAR SUPERIOR */}
       <div className="card border-0 shadow-sm mb-4 p-4">
         <div className="row align-items-center">
-          <div className="col-md-5">
+          <div className="col-md-4">
             <h3 className="fw-bold mb-1">Centro de Control</h3>
             <p className="text-muted mb-0 small">Administración y Acciones Críticas</p>
           </div>
-          <div className="col-md-7 text-end d-flex gap-2 justify-content-end align-items-center">
-            <button className={`btn d-flex align-items-center gap-2 fw-bold ${isScanning ? 'btn-warning' : 'btn-dark'}`} onClick={handleScan} disabled={isScanning}>
+          <div className="col-md-8 text-end d-flex gap-2 justify-content-end align-items-center">
+            
+            {/* BOTÓN DE ESCANEAR (Existente) */}
+            <button className={`btn d-flex align-items-center gap-2 fw-bold ${isScanning ? 'btn-warning' : 'btn-dark'}`} onClick={handleScan} disabled={isScanning || isRefreshing}>
               {isScanning ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />} Escanear Ahora
             </button>
-            <button className="btn btn-outline-danger fw-bold" onClick={clearAllPosts} disabled={isScanning}>
+
+            {/* NUEVO BOTÓN DE REFRESCO */}
+            <button className={`btn d-flex align-items-center gap-2 fw-bold ${isRefreshing ? 'btn-warning' : 'btn-outline-primary'}`} onClick={handleRefreshMedia} disabled={isScanning || isRefreshing}>
+              {isRefreshing ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />} Refrescar Links
+            </button>
+
+            <button className="btn btn-outline-danger fw-bold" onClick={clearAllPosts} disabled={isScanning || isRefreshing}>
               <Trash2 size={18} /> Vaciar Historial
             </button>
             <div className="vr mx-2"></div>
@@ -159,7 +179,6 @@ const AdminManagement = () => {
       </div>
 
       <div className="row">
-        {/* FORMULARIO DE CUENTAS */}
         <div className="col-md-4">
           <div className="card shadow-sm p-4 border-0">
             <h5 className="fw-bold mb-3">{editingId ? "Editar Usuario" : "Nuevo Administrador"}</h5>
@@ -180,7 +199,6 @@ const AdminManagement = () => {
           </div>
         </div>
 
-        {/* LISTADO DE CUENTAS */}
         <div className="col-md-8">
           <div className="card shadow-sm border-0">
             <div className="p-3 bg-white border-bottom"><h6 className="m-0 fw-bold">Usuarios con Acceso al Panel</h6></div>

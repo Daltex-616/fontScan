@@ -25,13 +25,10 @@ const PostCard = ({ post }) => {
     return (
         <div className="post-card shadow-sm">
             <div className="media-container mb-2">
-                <span className="badge bg-dark position-absolute top-0 end-0 m-2" style={{ zIndex: 5 }}>
-                    {post.type?.toUpperCase()}
-                </span>
                 <img 
                     src={post.mediaUrl} 
                     alt={post.type === 'reel' ? "Reel placeholder" : "Post"} 
-                    onError={(e) => { e.target.src = 'https://via.placeholder.com/300?text=Sin+Imagen'; }}
+                    onError={(e) => { e.target.src = 'https://ampdigital.s3-us-west-2.amazonaws.com/Instagram%20Icon.webp'; }}
                 />
             </div>
             
